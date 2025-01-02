@@ -4,6 +4,7 @@ import ResponseService from '../services/response.service';
 import { comparePassword, hashPassword } from '../utils/password';
 import { generateToken } from '../utils/jwt';
 import { uploadImage } from '../services/cloudinary.service';
+import { sendEmail } from '../services/email.service';
 
 export const loginUser = async (
   req: Request,
@@ -73,6 +74,19 @@ export const registerUser = async (
       role,
       profilePic: uploadedImage?.secure_url,
     });
+
+    // Send welcome email
+    await sendEmail({
+      email: email,
+      subject: `Welcome to our Task Management `,
+      message: `Welcome to our Task Management by Manjil Koirala. We are happy to have you here ${name}. Your role is ${role}.`,
+    })
+      .then(() => {
+        console.log('Email sent');
+      })
+      .catch((error) => {
+        ResponseService.error(res, 'Error sending email', error, 500);
+      });
 
     return ResponseService.success(res, 'Signup successful', newUser, 201);
   } catch (error) {
