@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import { IUser } from "../interfaces/user.interface";
+import mongoose from 'mongoose';
+import { IUser } from '../interfaces/user.interface';
 
 const userSchema = new mongoose.Schema<IUser>(
   {
@@ -18,15 +18,15 @@ const userSchema = new mongoose.Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ["admin", "user"],
-      default: "user",
+      enum: ['admin', 'user'],
+      default: 'user',
     },
     profilePic: {
       type: String,
-      required: false,
+      required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export const User = mongoose.model("User", userSchema);
+export const User = mongoose.model('User', userSchema);
