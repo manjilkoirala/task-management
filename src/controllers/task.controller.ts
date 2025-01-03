@@ -3,6 +3,7 @@ import { Task } from '../models/task.model';
 import ResponseService from '../services/response.service';
 import { User } from '../models/user.model';
 import { IUser } from '../interfaces/user.interface';
+import redisClient from '../services/radisClient';
 
 export const createTask = async (
   req: Request & { user?: IUser },
@@ -11,10 +12,9 @@ export const createTask = async (
 ) => {
   try {
     const { title, description, status, priority, deadline } = req.body;
-    const userId = req.user?.id as IUser;
-    console.log('Creating task for user:', userId);
+    const { role, id } = req.user as IUser;
 
-    const assignee = await User.findById(userId);
+    const assignee = await User.findById(id);
     if (!assignee) {
       return ResponseService.error(res, 'User not found', null, 404);
     }
@@ -25,8 +25,23 @@ export const createTask = async (
       status,
       priority,
       deadline,
-      assignee: userId,
+      assignee: id,
     });
+
+    // Invalidate relevant cache keys
+    try {
+      const cachePattern = `tasks:${role}:${id}:*`;
+      console.log('Cache Pattern:', cachePattern); // Log the cache pattern
+      const keys = await redisClient.keys(cachePattern);
+      console.log('Deleting...', keys);
+
+      if (keys.length > 0) {
+        await redisClient.del(...(keys as any));
+        console.log(`Invalidated ${keys.length} cache keys:`, keys);
+      }
+    } catch (redisError) {
+      console.error('Failed to invalidate cache:', redisError);
+    }
 
     return ResponseService.success(res, 'Task created successfully', newTask);
   } catch (error) {
@@ -66,17 +81,42 @@ export const getTasks = async (
     // Define query and pagination logic
     let query = role === 'admin' ? {} : { assignee: id };
 
+    //Generate unique cache key
+    const cacheKey = `tasks:${role}:${id}:${sortBy}:${order}:${page}:${limit}`;
+    console.log('Generated Cache Key:', cacheKey); // Log the cache key
+
+    //Check if data is in cache
+    const cachedTasks = await redisClient.get(cacheKey);
+    if (cachedTasks) {
+      console.log('Data retrieved from cache');
+      return ResponseService.success(
+        res,
+        'Tasks retrieved successfully (from cache)',
+        JSON.parse(cachedTasks),
+      );
+    }
+    console.log('Data retrieved from database');
+
     const tasks = await Task.find(query)
       .sort({ [sortBy as string]: sortOrder })
       .skip((pageNumber - 1) * pageSize) // Skip tasks for previous pages
       .limit(pageSize); // Limit tasks per page
 
-    return ResponseService.success(res, 'Tasks retrieved successfully', {
+    const response = {
       total: tasks.length,
       page: pageNumber,
       limit: pageSize,
       tasks: tasks,
-    });
+    };
+
+    //Store data in cache
+    await redisClient.set(cacheKey, JSON.stringify(response), { EX: 60 });
+
+    return ResponseService.success(
+      res,
+      'Tasks retrieved successfully',
+      response,
+    );
   } catch (error) {
     next(error);
   }
