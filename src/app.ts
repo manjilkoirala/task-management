@@ -3,6 +3,7 @@ import errorHandler from './middlewares/errorHandler';
 import routes from './routes';
 import swaggerUi from 'swagger-ui-express';
 import swaggerDocs from '../swagger-output.json';
+import sendDeadlineEmails from './services/cron/sendDeadlineEmails';
 const app = express();
 
 app.use(
@@ -13,6 +14,9 @@ app.use(
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
+
+// Initialize cron job
+sendDeadlineEmails();
 
 // Serve Swagger documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
