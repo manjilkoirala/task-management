@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import { ITask } from "../interfaces/task.interface";
+import mongoose from 'mongoose';
+import { ITask } from '../interfaces/task.interface';
 
 const taskSchema = new mongoose.Schema<ITask>(
   {
@@ -13,13 +13,13 @@ const taskSchema = new mongoose.Schema<ITask>(
     },
     status: {
       type: String,
-      enum: ["pending", "in-progress", "completed"],
-      default: "pending",
+      enum: ['pending', 'in-progress', 'completed'],
+      default: 'pending',
     },
     priority: {
       type: String,
-      enum: ["low", "medium", "high"],
-      default: "low",
+      enum: ['low', 'medium', 'high'],
+      default: 'low',
     },
     deadline: {
       type: Date,
@@ -27,11 +27,15 @@ const taskSchema = new mongoose.Schema<ITask>(
     },
     assignee: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
+    remainderEmail: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export const Task = mongoose.model("Task", taskSchema);
+export const Task = mongoose.model('Task', taskSchema);
